@@ -15,6 +15,9 @@ wheels/
 # Données
 data/
 
+#Formation
+formation/
+
 # Caches des outils
 .ruff_cache/
 .pytest_cache/
