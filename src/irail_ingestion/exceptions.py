@@ -4,9 +4,9 @@
 class MissingSettingError(Exception):
     """Levée quand une variable d'environnement obligatoire est absente ou vide."""
 
+
 class DateIsNotRightError(Exception):
     """Levée quand une date ne respecte pas les critere de création de bronze"""
-
 
 
 class IRailAPIError(Exception):
@@ -33,6 +33,7 @@ class InvalidRequestError(IRailAPIError):
 class InvalidResponseError(IRailAPIError):
     """When: Raised when HTTP 200 but data of response is not what we are waiting for.
     Retry: No"""
+
 
 class PayloadIsEmptyError(IRailAPIError):
     """When a payload has no departures, he is empty"""
