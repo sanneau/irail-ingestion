@@ -20,7 +20,8 @@ class Settings:
 
 
 def _require_env(name: str) -> str:
-    """Renvoie la valeur de la variable `name`, ou lève MissingSettingError si elle manque ou est vide."""
+    """Renvoie la valeur de la variable `name`,
+    ou lève MissingSettingError si elle manque ou est vide."""
     try:
         value = os.environ[name]
     except KeyError as e:
@@ -39,7 +40,8 @@ def split_stations(raw: str) -> tuple[str, ...]:
 
 
 def load_settings() -> Settings:
-    """Lit, convertit et valide la configuration depuis les variables d'environnement."""
+    """Lit, convertit et valide la configuration depuis les variables
+    d'environnement."""
     return Settings(
         base_url=_require_env("IRAIL_BASE_URL"),
         user_agent=_require_env("IRAIL_USER_AGENT"),
