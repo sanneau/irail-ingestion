@@ -1,2 +1,5 @@
+from irail_ingestion.config import load_settings
+
 def main() -> None:
-    print("Hello from irail-ingestion!")
+    load_settings()
+    
