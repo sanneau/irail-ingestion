@@ -14,7 +14,7 @@ class ConvertionIsWrongError(ValueError):
 
 
 class InvalidSnapshotError(Exception):
-    """Levée quand une photo bronze entière est inexploitable (sa structure est cassée)."""
+    """Levée quand une photo bronze entière est inexploitable"""
 
 
 class IRailAPIError(Exception):

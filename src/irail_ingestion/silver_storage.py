@@ -10,14 +10,12 @@ from irail_ingestion.exceptions import DateIsNotRightError
 
 logger = logging.getLogger(__name__)
 
-def read_files_in_b_date(
-    base_dir: Path, date_to_read: dt = "2026-09-28"
-) -> list[Path]:
+
+def read_files_in_b_date(base_dir: Path, date_to_read: dt = "2026-09-28") -> list[Path]:
     """Give back the list of files for one date choose"""
     total_path = "date=" + format_date(date_to_read)
     base_path = Path(base_dir) / total_path
-    return  list(base_path.glob("**/*.json"))
-    
+    return list(base_path.glob("**/*.json"))
 
 
 def write_silver_parquet(

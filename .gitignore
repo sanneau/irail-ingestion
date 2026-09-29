@@ -21,5 +21,3 @@ formation/
 # Caches des outils
 .ruff_cache/
 .pytest_cache/
-
-

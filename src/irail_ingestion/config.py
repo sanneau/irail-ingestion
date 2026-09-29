@@ -7,6 +7,7 @@ from pathlib import Path
 from irail_ingestion.exceptions import MissingSettingError
 
 DEFAULT_DATA_DIR = "data/raw"
+DEFAULT_SILVER_DIR = "data/silver"
 DEFAULT_TIMEOUT_S = "10"
 
 
@@ -17,6 +18,7 @@ class Settings:
     station_ids: tuple[str, ...]
     data_dir: Path
     timeout_s: float
+    silver_dir: Path
 
 
 def _require_env(name: str) -> str:
@@ -48,4 +50,5 @@ def load_settings() -> Settings:
         station_ids=split_stations(_require_env("IRAIL_STATION_IDS")),
         data_dir=Path(os.environ.get("IRAIL_DATA_DIR", DEFAULT_DATA_DIR)),
         timeout_s=float(os.environ.get("IRAIL_TIMEOUT_S", DEFAULT_TIMEOUT_S)),
+        silver_dir=Path(os.environ.get("IRAIL_SILVER_DIR", DEFAULT_SILVER_DIR)),
     )

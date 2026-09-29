@@ -5,7 +5,7 @@ CREATE OR REPLACE VIEW departures AS SELECT * FROM "data/silver/departures/*/*.p
 -- 1. Pour chaque gare : le nombre de départs, et le nombre en retard (≥ 6 min, soit delay_s >= 360, et non annulés).
 SELECT departure_station_name AS "STATION_DEPART",
     count(*) AS "NOMBRE DE DEPART",
-    count(*) FILTER (WHERE delay_s  >= 360) AS "NOMBRE DE TRAINS EN RETARD",  
+    count(*) FILTER (WHERE delay_s  >= 360) AS "NOMBRE DE TRAINS EN RETARD",
 FROM departures
 GROUP BY (departure_station_id, departure_station_name)
 ORDER BY  count(*) desc;
@@ -30,7 +30,7 @@ ORDER BY (count(*) FILTER (WHERE delay_s  < 360)/count(*)) * 100 desc;
 --4. Requête 4 : la ponctualité par heure de la journée (heure belge)
 SELECT hour(timezone('Europe/Brussels', scheduled_at)) AS "HEURE",
     count(*) AS "NOMBRE DE DEPART",
-    round((count(*) FILTER (WHERE delay_s  < 360)/count(*)) * 100, 1) AS "ponctualité_pct"  
+    round((count(*) FILTER (WHERE delay_s  < 360)/count(*)) * 100, 1) AS "ponctualité_pct"
 FROM departures
 GROUP BY hour(timezone('Europe/Brussels', scheduled_at))
 ORDER BY hour(timezone('Europe/Brussels', scheduled_at)) ASC;

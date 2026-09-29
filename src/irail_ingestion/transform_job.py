@@ -4,6 +4,7 @@ import logging
 import time
 from datetime import UTC, datetime
 
+from irail_ingestion.config import load_settings
 from irail_ingestion.exceptions import InvalidSnapshotError
 from irail_ingestion.logging_config import setup_logging
 from irail_ingestion.silver_storage import read_files_in_b_date, write_silver_parquet
@@ -16,9 +17,6 @@ from irail_ingestion.transform import (
 
 logger = logging.getLogger(__name__)
 
-BASE_PATH_OF_SILVER_STORAGE = "data/silver/departures"
-BASE_PATH_OF_BRONZE_PATH = "data/raw/liveboard"
-
 
 def from_str_to_datetime(date_chosen: str) -> datetime:
     """Convert 'YYYY-MM-DD' into a datetime at midnight UTC."""
@@ -29,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     """Transform one day of bronze liveboard files into the silver Parquet."""
     start = time.monotonic()
     setup_logging()
+    user_settings = load_settings()
 
     parser = argparse.ArgumentParser(
         description="Transforme une journée de bronze en silver (Parquet)."
@@ -42,7 +41,9 @@ def main(argv: list[str] | None = None) -> int:
 
     list_good_integration, list_bad_integration = [], []
     files_wrong = 0
-    list_iteration = read_files_in_b_date(BASE_PATH_OF_BRONZE_PATH, date_final)
+    list_iteration = read_files_in_b_date(
+        user_settings.data_dir / "liveboard", date_final
+    )
     for el in list_iteration:
         try:
             with el.open("r", encoding="utf-8") as f:
@@ -60,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     dataframe_unique = keep_latest_unique_row(dataframe_not_finished)
     path_write = write_silver_parquet(
         dataframe_unique,
-        BASE_PATH_OF_SILVER_STORAGE,
+        user_settings.silver_dir / "departures",
         date_final,
     )
 
