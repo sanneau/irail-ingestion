@@ -9,6 +9,14 @@ class DateIsNotRightError(Exception):
     """Levée quand une date ne respecte pas les critere de création de bronze"""
 
 
+class ConvertionIsWrongError(ValueError):
+    """Raise when type is not the right one waited"""
+
+
+class InvalidSnapshotError(Exception):
+    """Levée quand une photo bronze entière est inexploitable (sa structure est cassée)."""
+
+
 class IRailAPIError(Exception):
     """Erreur liée à un appel à l'API iRail (classe de base)."""
 
