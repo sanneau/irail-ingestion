@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=2.5.3",
     "pandas>=3.0.6",
     "pyarrow>=25.0.1",
+    "pytest>=9.1.1",
     "requests>=2.34.2",
     "tenacity>=9.1.4",
 ]
@@ -28,8 +29,12 @@ build-backend = "uv_build"
 dev = [
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
+    "responses>=0.26.3",
     "ruff>=0.16.8",
 ]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "G", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
