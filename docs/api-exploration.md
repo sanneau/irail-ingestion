@@ -5,7 +5,7 @@
 ## 1. Endpoints
 |   endpoint    |   rôle               |   utile pour notre projet ? | info suplémentaire         |
 |---------------|----------------------|-----------------------------|----------------------------|
-|   stations    |get station           |             oui             |joindre sur stationinfo@id  | 
+|   stations    |get station           |             oui             |joindre sur stationinfo@id  |
 |   liveboards  |snapshot des train    |             oui             |                            |
 |   connections |get connection(walk,.)|             non             |                            |
 |   vehicles    |get vehicle info      |             oui             |                            |
@@ -18,8 +18,8 @@
 
 |   paramètre|   obligatoire |   valeurs possibles |
 |------------|---------------|---------------------|
-|    station |   YES (ou id) | Gent-Sint-Pieters   | 
-|    id      |   YES (ou id) | BE.NMBS.008892007   | 
+|    station |   YES (ou id) | Gent-Sint-Pieters   |
+|    id      |   YES (ou id) | BE.NMBS.008892007   |
 |    arrdep  |      NO       | departure/arrival   |
 |    alerts  |      NO       | false/true          |
 |    time    |      NO       | 1230 format:HHMM    |
