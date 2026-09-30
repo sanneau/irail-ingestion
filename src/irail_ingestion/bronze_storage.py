@@ -16,7 +16,6 @@ def build_storage_path(base_path: str, station_id: str, date_utc: datetime) -> P
 
     date_utc_ready = date_utc.astimezone(UTC)
     path_to_build = Path(base_path) / "liveboard"
-
     path_to_build = path_to_build / f"date={format_date(date_utc_ready)}"
     path_to_build = (
         path_to_build / f"{station_id}_{get_time_from_datetime(date_utc_ready)}.json"
