@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 irail-ingestion = "irail_ingestion.ingest_job:main"
 irail-transform = "irail_ingestion.transform_job:main"
+irail-stations = "irail_ingestion.stations_job:main"
 
 [build-system]
 requires = ["uv_build>=0.12.17,<0.13.0"]

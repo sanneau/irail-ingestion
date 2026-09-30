@@ -21,7 +21,10 @@ class IRailAPIError(Exception):
     """Erreur liée à un appel à l'API iRail (classe de base)."""
 
     def __init__(
-        self, message: str, station_id: str, status_code: int | None = None
+        self,
+        message: str,
+        station_id: str | None = None,
+        status_code: int | None = None,
     ) -> None:
         super().__init__(message)
         self.station_id = station_id
@@ -41,7 +44,3 @@ class InvalidRequestError(IRailAPIError):
 class InvalidResponseError(IRailAPIError):
     """When: Raised when HTTP 200 but data of response is not what we are waiting for.
     Retry: No"""
-
-
-class PayloadIsEmptyError(IRailAPIError):
-    """When a payload has no departures, he is empty"""

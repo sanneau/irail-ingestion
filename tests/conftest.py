@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 
 import pytest
+import requests
 
+from irail_ingestion.client import build_session
 from irail_ingestion.config import Settings
 
 
@@ -20,6 +22,12 @@ def settings() -> Settings:
 
 
 @pytest.fixture
+def b_session(settings) -> requests.Session:
+    """créer un build session a passer en parametre"""
+    return build_session(settings)
+
+
+@pytest.fixture
 def bronze_env(tmp_path, monkeypatch, payload) -> Path:
     """Configure l'environnement vers tmp_path et
     y dépose un fichier bronze du 24/09."""
@@ -34,6 +42,41 @@ def bronze_env(tmp_path, monkeypatch, payload) -> Path:
     bronze_file = bronze_day / "BE.NMBS.008813003_20260924T135000Z.json"
     bronze_file.write_text(json.dumps(payload), encoding="utf-8")
     return tmp_path
+
+
+@pytest.fixture
+def payload_station() -> dict:
+    """Un payload /stations iRail valide, avec 3 gares (dont une étrangère)."""
+    return {
+        "version": "1.4",
+        "timestamp": "1790752736",
+        "station": [
+            {
+                "@id": "http://irail.be/stations/NMBS/008863446",
+                "id": "BE.NMBS.008863446",
+                "name": "Sclaigneaux",
+                "locationX": "5.026363",
+                "locationY": "50.492247",
+                "standardname": "Sclaigneaux",
+            },
+            {
+                "@id": "http://irail.be/stations/NMBS/008843133",
+                "id": "BE.NMBS.008843133",
+                "name": "Sclessin",
+                "locationX": "5.558911",
+                "locationY": "50.609844",
+                "standardname": "Sclessin",
+            },
+            {
+                "@id": "http://irail.be/stations/NMBS/008721405",
+                "id": "BE.NMBS.008721405",
+                "name": "Selestat",
+                "locationX": "7.449999",
+                "locationY": "48.26667",
+                "standardname": "Selestat",
+            },
+        ],
+    }
 
 
 @pytest.fixture

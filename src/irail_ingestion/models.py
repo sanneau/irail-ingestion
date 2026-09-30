@@ -21,3 +21,16 @@ class Departure:
     platform_changed: bool
     occupancy: str | None
     source_file: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Station:
+    """Represent a station wich is a name, locationX and Y and id"""
+
+    station_id: str
+    standard_name: str
+    longitude: float
+    latitude: float
+    api_generated_at: datetime
+    snapshot_at: datetime
+    source_file: str

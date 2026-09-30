@@ -1,14 +1,15 @@
 import logging
+import math
 from datetime import UTC, datetime
 
 import pandas as pd
 
 from irail_ingestion.exceptions import ConvertionIsWrongError, InvalidSnapshotError
-from irail_ingestion.models import Departure
+from irail_ingestion.models import Departure, Station
 
 logger = logging.getLogger(__name__)
 
-SILVER_SCHEMA: dict[str, str] = {
+SILVER_SCHEMA_LIVEBOARD: dict[str, str] = {
     "departure_station_id": "string",
     "departure_station_name": "string",
     "snapshot_at": "datetime64[ns, UTC]",
@@ -26,6 +27,16 @@ SILVER_SCHEMA: dict[str, str] = {
     "source_file": "string",
 }
 
+SILVER_SCHEMA_STATION: dict[str, str] = {
+    "station_id": "string",
+    "standard_name": "string",
+    "longitude": "Float64",
+    "latitude": "Float64",
+    "api_generated_at": "datetime64[ns, UTC]",
+    "snapshot_at": "datetime64[ns, UTC]",
+    "source_file": "string",
+}
+
 PRIMARY_KEY = ["departure_station_id", "scheduled_at", "vehicle_id"]
 
 
@@ -34,6 +45,17 @@ def from_txt_to_int(text: str) -> int:
         return int(text)
     except (ValueError, TypeError) as e:
         raise ConvertionIsWrongError(f"Entier invalide : {text!r}") from e
+
+
+def from_txt_to_float(text: str) -> float:
+    try:
+        value = float(text)
+    except (ValueError, TypeError) as e:
+        raise ConvertionIsWrongError(f"Nombre décimal invalide : {text!r}") from e
+    # float() accepte "nan", "NaN", "inf", "-Infinity", "1e999"… : on vérifie la VALEUR
+    if not math.isfinite(value):
+        raise ConvertionIsWrongError(f"Nombre non fini (NaN ou infini) : {text!r}")
+    return value
 
 
 def from_txt_to_bool(txtbool: str) -> bool:
@@ -60,8 +82,14 @@ def from_txt_to_time(time: str) -> datetime:
 
 
 def from_file_name_to_snapshot(file_name: str) -> datetime:
-    timestamp_part = file_name.removesuffix(".json").rsplit("_", 1)[-1]
-    return datetime.strptime(timestamp_part, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    try:
+        timestamp_part = file_name.removesuffix(".json").rsplit("_", 1)[-1]
+        date_valid = datetime.strptime(timestamp_part, "%Y%m%dT%H%M%SZ").replace(
+            tzinfo=UTC
+        )
+        return date_valid
+    except ValueError as e:
+        raise ConvertionIsWrongError(f"File Name Invalid : {file_name!r}") from e
 
 
 def from_payload_to_dataclass(
@@ -104,9 +132,42 @@ def from_payload_to_dataclass(
     return (list_good_item, list_wrong_item)
 
 
+def from_payload_to_dataclass_station(
+    payload: dict, snapshot_at: datetime, source_file: str
+) -> tuple[list[Station], list[dict]]:
+    list_good_item, list_wrong_item = [], []
+    if payload.get("station"):
+        for raw in payload["station"]:
+            try:
+                list_good_item.append(
+                    Station(
+                        standard_name=raw["standardname"],
+                        station_id=raw["id"],
+                        latitude=from_txt_to_float(raw["locationY"]),
+                        longitude=from_txt_to_float(raw["locationX"]),
+                        snapshot_at=snapshot_at,
+                        api_generated_at=from_txt_to_time(payload["timestamp"]),
+                        source_file=source_file,
+                    )
+                )
+            except (ValueError, TypeError, KeyError) as e:
+                logger.warning("Ligne rejetée dans %s : %s", source_file, e)
+                list_wrong_item.append(
+                    {"source_file": source_file, "reason": str(e), "raw": raw}
+                )
+    else:
+        raise InvalidSnapshotError()
+    return (list_good_item, list_wrong_item)
+
+
 def build_dataframe_for_liveboard(raw_checked: list[Departure]) -> pd.DataFrame:
-    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA.keys()))
-    return df.astype(SILVER_SCHEMA)
+    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA_LIVEBOARD.keys()))
+    return df.astype(SILVER_SCHEMA_LIVEBOARD)
+
+
+def build_dataframe_for_station(raw_checked: list[Station]) -> pd.DataFrame:
+    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA_STATION.keys()))
+    return df.astype(SILVER_SCHEMA_STATION)
 
 
 def keep_latest_unique_row(data_table: pd.DataFrame) -> pd.DataFrame:
