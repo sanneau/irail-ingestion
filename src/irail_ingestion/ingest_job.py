@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> int:
+    """Create bronze file of liveboard"""
     start = time.monotonic()
     count_error = count_succeed = 0
     setup_logging()

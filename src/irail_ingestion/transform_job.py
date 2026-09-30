@@ -32,7 +32,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Transforme une journée de bronze en silver (Parquet)."
     )
-    # type= : argparse appelle la fonction ; une date invalide → message clair + code 2
     parser.add_argument(
         "date", type=from_str_to_datetime, help="la journée à traiter (AAAA-MM-JJ, UTC)"
     )
