@@ -37,6 +37,41 @@ def bronze_env(tmp_path, monkeypatch, payload) -> Path:
 
 
 @pytest.fixture
+def payload_station() -> dict:
+    """Un payload liveboard iRail valide, avec un seul départ."""
+    return {
+        "version": "1.4",
+        "timestamp": "790752736",
+        "station": [
+            {
+                "@id": "http://irail.be/stations/NMBS/008863446",
+                "id": "BE.NMBS.008863446",
+                "name": "Sclaigneaux",
+                "locationX": "5.026363",
+                "locationY": "50.492247",
+                "standardname": "Sclaigneaux",
+            },
+            {
+                "@id": "http://irail.be/stations/NMBS/008843133",
+                "id": "BE.NMBS.008843133",
+                "name": "Sclessin",
+                "locationX": "5.558911",
+                "locationY": "50.609844",
+                "standardname": "Sclessin",
+            },
+            {
+                "@id": "http://irail.be/stations/NMBS/008721405",
+                "id": "BE.NMBS.008721405",
+                "name": "Selestat",
+                "locationX": "7.449999",
+                "locationY": "48.26667",
+                "standardname": "Selestat",
+            },
+        ],
+    }
+
+
+@pytest.fixture
 def payload() -> dict:
     """Un payload liveboard iRail valide, avec un seul départ."""
     return {

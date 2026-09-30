@@ -111,3 +111,48 @@ def fetch_liveboard(
     )
 
     return payload
+
+
+@retry(
+    retry=retry_if_exception_type(TransientAPIError),
+    stop=stop_after_attempt(MAX_ATTEMPTS),
+    wait=wait_random_exponential(multiplier=1, min=1, max=MAX_WAIT_S),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+def fetch_stations(session: requests.Session, settings: Settings) -> dict:
+    """Récupère les stations -> JSON brute -> validation"""
+    url = f"{settings.base_url}/stations"
+    params = {"format": "json", "lang": "en"}
+
+    try:
+        response = session.get(url, params=params, timeout=settings.timeout_s)
+    except (requests.Timeout, requests.ConnectionError) as e:
+        raise TransientAPIError(
+            "No answer or impossible connection for stations retrieval"
+        ) from e
+
+    if response.status_code == 429 or response.status_code >= 500:
+        raise TransientAPIError(
+            f"HTTP {response.status_code} : erreur temporaire station retrieval ",
+            status_code=response.status_code,
+        )
+
+    if response.status_code >= 400 and response.status_code <= 499:
+        raise InvalidRequestError(f"message : {response.text[:200]}")
+
+    try:
+        payload = response.json()
+    except requests.JSONDecodeError as e:
+        raise InvalidResponseError("JSON Error code") from e
+
+    if not payload.get("station"):
+        raise InvalidResponseError("Error code payload empty or non-existent")
+
+    logger.info(
+        "gares reçues : %d, durée de l'appel : %.2f s",
+        len(payload["station"]),
+        response.elapsed.total_seconds(),
+    )
+
+    return payload
