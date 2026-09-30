@@ -46,10 +46,10 @@ def bronze_env(tmp_path, monkeypatch, payload) -> Path:
 
 @pytest.fixture
 def payload_station() -> dict:
-    """Un payload liveboard iRail valide, avec un seul départ."""
+    """Un payload /stations iRail valide, avec 3 gares (dont une étrangère)."""
     return {
         "version": "1.4",
-        "timestamp": "790752736",
+        "timestamp": "1790752736",
         "station": [
             {
                 "@id": "http://irail.be/stations/NMBS/008863446",
