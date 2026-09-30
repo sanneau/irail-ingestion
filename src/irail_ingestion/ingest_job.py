@@ -29,9 +29,10 @@ def main() -> int:
         else:
             count_succeed += 1
             write_payload_to_path(
-                build_storage_path(user_settings.data_dir, station, fetched_at),
+                build_storage_path(
+                    user_settings.data_dir, "liveboard", station, fetched_at
+                ),
                 payload_to_write,
-                station,
             )
 
         time.sleep(PAUSE_BETWEEN_STATIONS_S)
