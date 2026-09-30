@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 
 import pytest
+import requests
 
+from irail_ingestion.client import build_session
 from irail_ingestion.config import Settings
 
 
@@ -17,6 +19,12 @@ def settings() -> Settings:
         silver_dir=Path("unused"),
         timeout_s=1.0,
     )
+
+
+@pytest.fixture
+def b_session(settings) -> requests.Session:
+    """créer un build session a passer en parametre"""
+    return build_session(settings)
 
 
 @pytest.fixture

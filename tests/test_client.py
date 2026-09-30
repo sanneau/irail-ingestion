@@ -4,7 +4,6 @@ from tenacity import wait_none
 
 from irail_ingestion.client import (
     MAX_ATTEMPTS,
-    build_session,
     fetch_liveboard,
     fetch_stations,
 )
@@ -20,15 +19,18 @@ FAKE_STATION = "Atlantis"
 URLLIVE = URL + "liveboard"
 URLSTATION = URL + "stations"
 
+ENDPOINTS = [
+    pytest.param(fetch_liveboard, URLLIVE, (STATION,), id="liveboard"),
+    pytest.param(fetch_stations, URLSTATION, (), id="stations"),
+]
+
 
 @responses.activate
-def test_fetch_liveboard_returns_the_payload(settings, payload):
+def test_fetch_liveboard_returns_the_payload(settings, payload, b_session):
     # Arrange : « si quelqu'un fait un GET sur URL, réponds 200 avec ce JSON »
     responses.add(responses.GET, URLLIVE, json=payload, status=200)
-    session = build_session(settings)
-
     # Act
-    result = fetch_liveboard(session, settings, STATION)
+    result = fetch_liveboard(b_session, settings, STATION)
 
     # Assert
     assert result == payload
@@ -37,13 +39,12 @@ def test_fetch_liveboard_returns_the_payload(settings, payload):
 
 
 @responses.activate
-def test_fetch_stations_return_payload(settings, payload_station):
+def test_fetch_stations_return_payload(settings, payload_station, b_session):
     # Arrange : « si quelqu'un fait un GET sur URL, réponds 200 avec ce JSON »
     responses.add(responses.GET, URLSTATION, json=payload_station, status=200)
-    session = build_session(settings)
 
     # Act
-    result = fetch_stations(session, settings)
+    result = fetch_stations(b_session, settings)
 
     # Assert
     assert result == payload_station
@@ -52,80 +53,78 @@ def test_fetch_stations_return_payload(settings, payload_station):
 
 
 @responses.activate
-def test_fetch_stations_return_empty_station(settings, payload_station):
+def test_fetch_stations_return_empty_station(settings, payload_station, b_session):
     payload_station["station"] = []
     responses.add(responses.GET, URLSTATION, json=payload_station, status=200)
-    session = build_session(settings)
     with pytest.raises(InvalidResponseError):
-        fetch_stations(session, settings)
+        fetch_stations(b_session, settings)
     assert len(responses.calls) == 1
 
 
 @responses.activate
-def test_fetch_stations_return_del_station_part(settings, payload_station):
+def test_fetch_stations_return_del_station_part(settings, payload_station, b_session):
     del payload_station["station"]
     responses.add(responses.GET, URLSTATION, json=payload_station, status=200)
-    session = build_session(settings)
     with pytest.raises(InvalidResponseError):
-        fetch_stations(session, settings)
+        fetch_stations(b_session, settings)
     assert len(responses.calls) == 1
 
 
 @responses.activate
-def test_stations_http_500_then_200_retries_and_succeeds(settings, payload_station):
+def test_stations_http_500_then_200_retries_and_succeeds(
+    settings, payload_station, b_session
+):
     # Arrange
     responses.add(responses.GET, URLSTATION, status=500)
     responses.add(responses.GET, URLSTATION, json=payload_station, status=200)
-    session = build_session(settings)
-
     fast_fetch = fetch_stations.retry_with(wait=wait_none())
-
     # Act
-    result = fast_fetch(session, settings)
-
+    result = fast_fetch(b_session, settings)
     # Assert
     assert result == payload_station
     assert len(responses.calls) == 2
 
 
 @responses.activate
-def test_http_400_raises_invalid_request_without_retry(settings, payload):
+@pytest.mark.parametrize("fetch, url, args", ENDPOINTS)
+def test_http_400_raises_invalid_request_without_retry(
+    settings, b_session, fetch, url, args
+):
     responses.add(
         responses.GET,
-        URLLIVE,
+        url,
         body="Invalid Request",
         status=400,
     )
-    session = build_session(settings)
     # Act
     with pytest.raises(InvalidRequestError):
-        fetch_liveboard(session, settings, FAKE_STATION)
+        fetch(b_session, settings, *args)
     # Assert
     assert len(responses.calls) == 1
 
 
 @responses.activate
-def test_liveboard_http_500_then_200_retries_and_succeeds(settings, payload):
+def test_liveboard_http_500_then_200_retries_and_succeeds(settings, payload, b_session):
     # Arrange
     responses.add(responses.GET, URLLIVE, status=500)
     responses.add(responses.GET, URLLIVE, json=payload, status=200)
-    session = build_session(settings)
     fast_fetch = fetch_liveboard.retry_with(wait=wait_none())
     # Act
-    result = fast_fetch(session, settings, STATION)
+    result = fast_fetch(b_session, settings, STATION)
     # Assert
     assert result == payload
     assert len(responses.calls) == 2
 
 
 @responses.activate
-def test_http_4x500_then_failed(settings, payload):
+@pytest.mark.parametrize("fetch, url, args", ENDPOINTS)
+def test_repeated_500_gives_up_after_max_attempts(
+    settings, b_session, fetch, url, args
+):
     # Arrange
-    responses.add(responses.GET, URLLIVE, status=500)
-    session = build_session(settings)
-    fast_fetch = fetch_liveboard.retry_with(wait=wait_none())
-
+    responses.add(responses.GET, url, status=500)
+    fast_fetch = fetch.retry_with(wait=wait_none())
     with pytest.raises(TransientAPIError):
-        fast_fetch(session, settings, STATION)
+        fast_fetch(b_session, settings, *args)
 
     assert len(responses.calls) == MAX_ATTEMPTS
