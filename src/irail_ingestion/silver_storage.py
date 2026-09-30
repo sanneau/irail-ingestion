@@ -36,3 +36,15 @@ def write_silver_parquet(
         path_to_build, engine="pyarrow", compression="snappy", index=False
     )
     return path_to_build
+
+
+def write_stations_parquet_station(
+    df_of_stations: pd.DataFrame, silver_dir: Path
+) -> Path:
+    """Construire le fichier parquet des station : ecrasé a chaque fois"""
+    path_to_build = Path(silver_dir) / "stations" / "stations.parquet"
+    path_to_build.parent.mkdir(parents=True, exist_ok=True)
+    df_of_stations.to_parquet(
+        path_to_build, engine="pyarrow", compression="snappy", index=False
+    )
+    return path_to_build
