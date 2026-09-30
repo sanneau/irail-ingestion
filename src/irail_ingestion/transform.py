@@ -60,8 +60,14 @@ def from_txt_to_time(time: str) -> datetime:
 
 
 def from_file_name_to_snapshot(file_name: str) -> datetime:
-    timestamp_part = file_name.removesuffix(".json").rsplit("_", 1)[-1]
-    return datetime.strptime(timestamp_part, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    try:
+        timestamp_part = file_name.removesuffix(".json").rsplit("_", 1)[-1]
+        date_valid = datetime.strptime(timestamp_part, "%Y%m%dT%H%M%SZ").replace(
+            tzinfo=UTC
+        )
+        return date_valid
+    except ValueError as e:
+        raise ConvertionIsWrongError(f"File Name Invalid : {file_name!r}") from e
 
 
 def from_payload_to_dataclass(

@@ -4,6 +4,7 @@ import pytest
 
 from irail_ingestion.exceptions import ConvertionIsWrongError, InvalidSnapshotError
 from irail_ingestion.transform import (
+    from_file_name_to_snapshot,
     from_payload_to_dataclass,
     from_txt_to_bool,
     from_txt_to_int,
@@ -83,3 +84,31 @@ class TestTransform:
     def test_zero_departures_is_not_an_error(self, payload):
         payload["departures"] = {"number": "0", "departure": []}
         assert from_payload_to_dataclass(payload, SNAPSHOT_AT, SOURCE_FILE) == ([], [])
+
+    @pytest.mark.parametrize(
+        "test_input,expected",
+        [
+            (
+                "/home/sanneau/projects/irail-ingestion/data/raw/liveboard/date=2026-09-25/BE.NMBS.008813003_20260925T172320Z.json",
+                datetime(2026, 9, 25, 17, 23, 20, tzinfo=UTC),
+            ),
+            (
+                "data/raw/liveboard/date=2026-09-29/BE.NMBS.008813003_20260929T114844Z.json",
+                datetime(2026, 9, 29, 11, 48, 44, tzinfo=UTC),
+            ),
+        ],
+    )
+    def test_from_file_name_to_snapshot_valid_date(self, test_input, expected):
+        assert from_file_name_to_snapshot(test_input) == expected
+
+    @pytest.mark.parametrize(
+        "test_input",
+        [
+            ("pas-une-date.json"),
+            ("84851855"),
+            ("BE.NMBS.008813003_20261340T000000Z.json"),
+        ],
+    )
+    def test_from_file_name_to_snapshot_not_a_date(self, test_input):
+        with pytest.raises(ConvertionIsWrongError):
+            from_file_name_to_snapshot(test_input)
