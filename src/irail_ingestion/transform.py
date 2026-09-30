@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pandas as pd
 
 from irail_ingestion.exceptions import ConvertionIsWrongError, InvalidSnapshotError
-from irail_ingestion.models import Departure
+from irail_ingestion.models import Departure, Station
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,16 @@ def from_txt_to_int(text: str) -> int:
         return int(text)
     except (ValueError, TypeError) as e:
         raise ConvertionIsWrongError(f"Entier invalide : {text!r}") from e
+
+
+def from_txt_to_float(text: str) -> float:
+    try:
+        if text == "nan" or text == "inf":
+            raise ConvertionIsWrongError(f"text egale a  : {text!r}")
+        else:
+            return float(text)
+    except (ValueError, TypeError) as e:
+        raise ConvertionIsWrongError(f"Chiffre Invalid : {text!r}") from e
 
 
 def from_txt_to_bool(txtbool: str) -> bool:
@@ -97,6 +107,34 @@ def from_payload_to_dataclass(
                         occupancy=replace_sentinel_value(
                             raw["occupancy"]["name"], "unknown"
                         ),
+                        source_file=source_file,
+                    )
+                )
+            except (ValueError, TypeError, KeyError) as e:
+                logger.warning("Ligne rejetée dans %s : %s", source_file, e)
+                list_wrong_item.append(
+                    {"source_file": source_file, "reason": str(e), "raw": raw}
+                )
+    else:
+        raise InvalidSnapshotError()
+    return (list_good_item, list_wrong_item)
+
+
+def from_payload_to_dataclass_station(
+    payload: dict, snapshot_at: datetime, source_file: str
+) -> tuple[list[Station], list[dict]]:
+    list_good_item, list_wrong_item = [], []
+    if payload.get("station"):
+        for raw in payload["station"]:
+            try:
+                list_good_item.append(
+                    Station(
+                        standard_name=raw["standardname"],
+                        station_id=raw["id"],
+                        latitude=from_txt_to_float(raw["locationY"]),
+                        longitude=from_txt_to_float(raw["locationX"]),
+                        snapshot_at=snapshot_at,
+                        api_generated_at=from_txt_to_time(payload["timestamp"]),
                         source_file=source_file,
                     )
                 )
