@@ -110,7 +110,9 @@ class TestTransform:
     def test_from_txt_to_float(self, text, expected):
         assert from_txt_to_float(text) == expected
 
-    @pytest.mark.parametrize("text", ["abc", "", None, "nan", "inf"])
+    @pytest.mark.parametrize(
+        "text", ["abc", "", None, "nan", "NaN", "inf", "-inf", "Infinity", "1e999"]
+    )
     def test_from_txt_to_float_rejects_invalid(self, text):
         with pytest.raises(ConvertionIsWrongError):
             from_txt_to_float(text)

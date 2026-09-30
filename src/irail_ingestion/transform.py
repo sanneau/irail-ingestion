@@ -1,4 +1,5 @@
 import logging
+import math
 from datetime import UTC, datetime
 
 import pandas as pd
@@ -8,7 +9,7 @@ from irail_ingestion.models import Departure, Station
 
 logger = logging.getLogger(__name__)
 
-SILVER_SCHEMA: dict[str, str] = {
+SILVER_SCHEMA_LIVEBOARD: dict[str, str] = {
     "departure_station_id": "string",
     "departure_station_name": "string",
     "snapshot_at": "datetime64[ns, UTC]",
@@ -26,6 +27,16 @@ SILVER_SCHEMA: dict[str, str] = {
     "source_file": "string",
 }
 
+SILVER_SCHEMA_STATION: dict[str, str] = {
+    "station_id": "string",
+    "standard_name": "string",
+    "longitude": "Float64",
+    "latitude": "Float64",
+    "api_generated_at": "datetime64[ns, UTC]",
+    "snapshot_at": "datetime64[ns, UTC]",
+    "source_file": "string",
+}
+
 PRIMARY_KEY = ["departure_station_id", "scheduled_at", "vehicle_id"]
 
 
@@ -38,12 +49,13 @@ def from_txt_to_int(text: str) -> int:
 
 def from_txt_to_float(text: str) -> float:
     try:
-        if text == "nan" or text == "inf":
-            raise ConvertionIsWrongError(f"text egale a  : {text!r}")
-        else:
-            return float(text)
+        value = float(text)
     except (ValueError, TypeError) as e:
-        raise ConvertionIsWrongError(f"Chiffre Invalid : {text!r}") from e
+        raise ConvertionIsWrongError(f"Nombre décimal invalide : {text!r}") from e
+    # float() accepte "nan", "NaN", "inf", "-Infinity", "1e999"… : on vérifie la VALEUR
+    if not math.isfinite(value):
+        raise ConvertionIsWrongError(f"Nombre non fini (NaN ou infini) : {text!r}")
+    return value
 
 
 def from_txt_to_bool(txtbool: str) -> bool:
@@ -149,8 +161,13 @@ def from_payload_to_dataclass_station(
 
 
 def build_dataframe_for_liveboard(raw_checked: list[Departure]) -> pd.DataFrame:
-    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA.keys()))
-    return df.astype(SILVER_SCHEMA)
+    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA_LIVEBOARD.keys()))
+    return df.astype(SILVER_SCHEMA_LIVEBOARD)
+
+
+def build_dataframe_for_station(raw_checked: list[Station]) -> pd.DataFrame:
+    df = pd.DataFrame(raw_checked, columns=list(SILVER_SCHEMA_STATION.keys()))
+    return df.astype(SILVER_SCHEMA_STATION)
 
 
 def keep_latest_unique_row(data_table: pd.DataFrame) -> pd.DataFrame:
