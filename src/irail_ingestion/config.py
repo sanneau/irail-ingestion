@@ -1,7 +1,7 @@
 """Chargement et validation de la configuration depuis les variables d'environnement."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from irail_ingestion.exceptions import MissingSettingError
@@ -9,6 +9,15 @@ from irail_ingestion.exceptions import MissingSettingError
 DEFAULT_DATA_DIR = "data/raw"
 DEFAULT_SILVER_DIR = "data/silver"
 DEFAULT_TIMEOUT_S = "10"
+
+
+@dataclass(frozen=True)
+class DbSettings:
+    host: str
+    port: int
+    name: str
+    user: str
+    password: str = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -51,4 +60,16 @@ def load_settings() -> Settings:
         data_dir=Path(os.environ.get("IRAIL_DATA_DIR", DEFAULT_DATA_DIR)),
         timeout_s=float(os.environ.get("IRAIL_TIMEOUT_S", DEFAULT_TIMEOUT_S)),
         silver_dir=Path(os.environ.get("IRAIL_SILVER_DIR", DEFAULT_SILVER_DIR)),
+    )
+
+
+def load_db_settings() -> DbSettings:
+    """Lit, convertit et valide la configuration de la base de données
+    depuis les variables d'environnement."""
+    return DbSettings(
+        host=_require_env("DB_HOST"),
+        port=int(_require_env("DB_PORT")),
+        name=_require_env("DB_NAME"),
+        user=_require_env("DB_USER"),
+        password=_require_env("DB_PASSWORD"),
     )
