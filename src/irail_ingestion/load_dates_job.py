@@ -16,7 +16,7 @@ from irail_ingestion.warehouse import (
 logger = logging.getLogger(__name__)
 
 
-def main(argv: list[str] | None = None):
+def main():
     """
     Main function to run the script to load date rows into the dim_date table.
     """
