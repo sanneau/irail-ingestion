@@ -20,7 +20,7 @@ FROM fact_departure AS d
 LEFT JOIN dim_date AS s ON d.date_key = s.date_key
 WHERE s.year IS null;
 
-
+--C4
 SELECT departure_key, scheduled_at, date_key, time_key
 FROM fact_departure
 WHERE date_key IS DISTINCT FROM
@@ -31,7 +31,7 @@ WHERE date_key IS DISTINCT FROM
 --C5
 SELECT *
 FROM fact_departure
-WHERE delay_s > 360;
+WHERE delay_s < 0;
 
 --C6
 SELECT scheduled_at, vehicle_id, array_agg(departure_station_key) AS station_keys

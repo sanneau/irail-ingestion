@@ -1,4 +1,6 @@
 import logging
+from datetime import UTC, date
+from datetime import datetime as dt
 
 import pandas as pd
 import psycopg
@@ -16,7 +18,6 @@ CREATE_DIM_STATION_SQL = """
     latitude         double precision NULL,
     snapshot_at      timestamptz NOT NULL,
     source_file      text NOT NULL);"""
-
 
 CREATE_DIM_DATE_SQL = """
     CREATE TABLE IF NOT EXISTS dim_date (
@@ -42,6 +43,17 @@ CREATE_DIM_TIME_SQL = """
     minute        integer NOT NULL,
     time_band     text NOT NULL,
     is_peak       boolean NOT NULL);"""
+
+CREATE_ETL_LOAD_LOG_SQL = """
+    CREATE TABLE IF NOT EXISTS etl_load_log (
+    load_id     integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    job         text NOT NULL,
+    run_date    date NOT NULL,
+    status      text NOT NULL,
+    rows_loaded int NULL,
+    started_at  timestamp with time zone NOT NULL,
+    finished_at timestamp with time zone NOT NULL,
+    error       text NULL);"""
 
 CREATE_FACT_DEPARTURE_SQL = """
     CREATE TABLE IF NOT EXISTS fact_departure (
@@ -119,7 +131,6 @@ UPSERT_DIM_STATION_SQL = """
     snapshot_at = EXCLUDED.snapshot_at,
     source_file = EXCLUDED.source_file;"""
 
-
 UPSERT_DIM_TIME_SQL = """
     INSERT INTO dim_time (time_key, full_time, hour,
     minute, time_band, is_peak)
@@ -131,7 +142,6 @@ UPSERT_DIM_TIME_SQL = """
     time_band = EXCLUDED.time_band,
     is_peak = EXCLUDED.is_peak;"""
 
-
 INSERT_STG_DEPARTURES_SQL = """
     INSERT INTO stg_departure (departure_station_id,
     departure_station_name, snapshot_at, scheduled_at,
@@ -141,6 +151,11 @@ INSERT_STG_DEPARTURES_SQL = """
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
     %s, %s, %s, %s);"""
 
+INSERT_LOAD_LOG_SQL = """
+    INSERT INTO etl_load_log (job,
+    run_date, status, rows_loaded, started_at,
+    finished_at, error) VALUES (%s, %s, %s,
+    %s, %s, %s, %s);"""
 
 UPSERT_FACT_DEPARTURES = """
     INSERT INTO fact_departure (departure_station_key,
@@ -174,7 +189,6 @@ UPSERT_FACT_DEPARTURES = """
     snapshot_at = EXCLUDED.snapshot_at,
     source_file = EXCLUDED.source_file;"""
 
-
 STATION_KEY_UNKNOWS = """
     INSERT INTO dim_station (station_key, station_id,
     standard_name, longitude, latitude, snapshot_at, source_file)
@@ -182,7 +196,6 @@ STATION_KEY_UNKNOWS = """
     VALUES (-1, 'UNKNOWNS', 'Gare inconnue', NULL, NULL,
     '1970-01-01', 'membre inconnu')
     ON CONFLICT (station_id) DO NOTHING;"""
-
 
 UNKNOWN_STATIONS_SQL = """
     SELECT s.departure_station_id
@@ -195,6 +208,19 @@ UNKNOWN_STATIONS_SQL = """
     LEFT JOIN dim_station AS d ON d.station_id = s.destination_station_id
     WHERE d.station_key IS NULL
     ORDER BY 1;"""
+
+INDEX_FACT_TIME_DEPARTURES = """
+CREATE INDEX IF NOT EXISTS idx_fact_departure_date
+ON fact_departure (date_key);"""
+
+INDEX_FACT_DEST_DEPARTURES = """
+CREATE INDEX IF NOT EXISTS idx_fact_destination_date
+ON fact_departure (destination_station_key);"""
+
+GET_ETL_LOAD_SUCCESS_DATE = """
+SELECT DISTINCT run_date
+FROM etl_load_log
+WHERE job = 'irail-load-facts' AND status = 'success'"""
 
 
 def date_rows_to_tuples(rows: list) -> list[tuple]:
@@ -327,7 +353,9 @@ def upsert_dim_time(db: DbSettings, rows: list[tuple]) -> int:
             return cur.rowcount
 
 
-def upsert_fact_departures(db: DbSettings, rows: list[tuple]) -> int:
+def upsert_fact_departures(
+    db: DbSettings, rows: list[tuple], run_date: date, started_at: dt
+) -> int:
     """Insère ou met à jour les départs dans la table fact_departures."""
     with psycopg.connect(
         host=db.host,
@@ -342,9 +370,24 @@ def upsert_fact_departures(db: DbSettings, rows: list[tuple]) -> int:
             cur.executemany(INSERT_STG_DEPARTURES_SQL, rows)
             cur.execute(UNKNOWN_STATIONS_SQL)
             unknown_stations = [row[0] for row in cur.fetchall()]
+            cur.execute(CREATE_ETL_LOAD_LOG_SQL)
             cur.execute(CREATE_FACT_DEPARTURE_SQL)
+            cur.execute(INDEX_FACT_TIME_DEPARTURES)
+            cur.execute(INDEX_FACT_DEST_DEPARTURES)
             cur.execute(UPSERT_FACT_DEPARTURES)
             loaded = cur.rowcount
+            cur.execute(
+                INSERT_LOAD_LOG_SQL,
+                (
+                    "irail-load-facts",
+                    run_date,
+                    "success",
+                    loaded,
+                    started_at,
+                    dt.now(UTC),
+                    None,
+                ),
+            )
             if unknown_stations:
                 logger.warning(
                     "%d gare(s) absente(s) de dim_station, départs rattachés au "
@@ -354,3 +397,43 @@ def upsert_fact_departures(db: DbSettings, rows: list[tuple]) -> int:
                     ", ".join(unknown_stations),
                 )
             return loaded
+
+
+def log_load_failure(
+    db: DbSettings, run_date: date, started_at: dt, error: str
+) -> None:
+    with psycopg.connect(
+        host=db.host,
+        port=db.port,
+        dbname=db.name,
+        user=db.user,
+        password=db.password,
+    ) as conn:
+        with conn.cursor() as cur:
+            cur.execute(CREATE_ETL_LOAD_LOG_SQL)
+            cur.execute(
+                INSERT_LOAD_LOG_SQL,
+                (
+                    "irail-load-facts",
+                    run_date,
+                    "failed",
+                    None,
+                    started_at,
+                    dt.now(UTC),
+                    error,
+                ),
+            )
+
+
+def loaded_days(db: DbSettings) -> set[date]:
+    with psycopg.connect(
+        host=db.host,
+        port=db.port,
+        dbname=db.name,
+        user=db.user,
+        password=db.password,
+    ) as conn:
+        with conn.cursor() as cur:
+            cur.execute(CREATE_ETL_LOAD_LOG_SQL)
+            cur.execute(GET_ETL_LOAD_SUCCESS_DATE)
+            return {row[0] for row in cur.fetchall()}
