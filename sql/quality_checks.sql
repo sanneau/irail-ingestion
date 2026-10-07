@@ -39,3 +39,20 @@ FROM fact_departure
 GROUP BY scheduled_at, vehicle_id
 HAVING bool_or(departure_station_key = -1)
    AND bool_or(departure_station_key <> -1);
+
+--C7
+SELECT station_id FROM dim_station GROUP BY station_id HAVING count(*) FILTER (WHERE is_current) > 1;
+
+--C8
+WITH VERSIONS AS (SELECT station_id, valid_from, valid_to, LEAD(valid_from) OVER (PARTITION BY station_id ORDER BY valid_from) AS next_valid_from  FROM dim_station)
+SELECT * FROM VERSIONS WHERE valid_to IS DISTINCT FROM coalesce(next_valid_from, '9999-12-31');
+
+--C9
+SELECT station_id, valid_from, valid_to FROM dim_station WHERE valid_from >= valid_to;
+
+--C10
+SELECT station_id, f.scheduled_at, f.vehicle_id
+FROM dim_station as s
+JOIN fact_departure AS f ON s.station_key = f.departure_station_key
+GROUP BY  station_id, f.scheduled_at, f.vehicle_id
+HAVING count(*) > 1;
