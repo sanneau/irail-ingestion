@@ -90,7 +90,7 @@ def load_one_day(date_run: date) -> int:
             db_settings, departure_rows(df_fact_dep), date_run, started_at
         )
     except psycopg.Error as e:
-        logger.error("Erreur de connexion à la base de données : %s", e)
+        logger.error("Erreur : %s", e)
         try:
             log_load_failure(db_settings, date_run, started_at, str(e))
         except psycopg.Error:
