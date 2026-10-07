@@ -12,12 +12,17 @@ logger = logging.getLogger(__name__)
 CREATE_DIM_STATION_SQL = """
     CREATE TABLE IF NOT EXISTS dim_station (
     station_key      integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    station_id       text NOT NULL UNIQUE,
+    station_id       text NOT NULL,
     standard_name    text NOT NULL,
     longitude        double precision NULL,
     latitude         double precision NULL,
     snapshot_at      timestamptz NOT NULL,
-    source_file      text NOT NULL);"""
+    source_file      text NOT NULL,
+    valid_from       timestamptz NOT NULL,
+    valid_to         timestamptz NOT NULL,
+    is_current       boolean NOT NULL,
+    UNIQUE (station_id, valid_from),
+    CHECK (valid_to > valid_from));"""
 
 CREATE_DIM_DATE_SQL = """
     CREATE TABLE IF NOT EXISTS dim_date (
@@ -81,6 +86,17 @@ CREATE_FACT_DEPARTURE_SQL = """
 
 TRUNCATE_STG_DEPARTURES = """ TRUNCATE stg_departure; """
 
+CREATE_STG_STATION_SQL = """
+    CREATE TABLE IF NOT EXISTS stg_station(
+    station_id       text NOT NULL,
+    standard_name    text NOT NULL,
+    longitude        double precision NULL,
+    latitude         double precision NULL,
+    snapshot_at      timestamptz NOT NULL,
+    source_file      text NOT NULL);"""
+
+TRUNCATE_STG_STATION = """ TRUNCATE stg_station; """
+
 CREATE_STG_DEPARTURE_SQL = """
     CREATE TABLE IF NOT EXISTS stg_departure(
     departure_station_id   text,
@@ -120,17 +136,6 @@ UPSERT_DIM_DATE_SQL = """
     is_holiday = EXCLUDED.is_holiday,
     holiday_name = EXCLUDED.holiday_name;"""
 
-UPSERT_DIM_STATION_SQL = """
-    INSERT INTO dim_station (station_id, standard_name,
-    longitude, latitude, snapshot_at, source_file)
-    VALUES (%s, %s, %s, %s, %s, %s)
-    ON CONFLICT (station_id) DO UPDATE SET
-    standard_name = EXCLUDED.standard_name,
-    longitude = EXCLUDED.longitude,
-    latitude = EXCLUDED.latitude,
-    snapshot_at = EXCLUDED.snapshot_at,
-    source_file = EXCLUDED.source_file;"""
-
 UPSERT_DIM_TIME_SQL = """
     INSERT INTO dim_time (time_key, full_time, hour,
     minute, time_band, is_peak)
@@ -151,6 +156,11 @@ INSERT_STG_DEPARTURES_SQL = """
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
     %s, %s, %s, %s);"""
 
+INSERT_STG_STATION_SQL = """
+    INSERT INTO stg_station ( station_id, standard_name,
+    longitude, latitude, snapshot_at, source_file)
+    VALUES (%s, %s, %s, %s, %s, %s);"""
+
 INSERT_LOAD_LOG_SQL = """
     INSERT INTO etl_load_log (job,
     run_date, status, rows_loaded, started_at,
@@ -162,21 +172,25 @@ UPSERT_FACT_DEPARTURES = """
     destination_station_key, date_key, time_key,
     scheduled_at, vehicle_id, delay_s, canceled, is_extra,
     platform_changed, train_type, platform, occupancy,
-    snapshot_at, source_file) SELECT
-    coalesce(dep.station_key, -1),
-    coalesce(dest.station_key, -1),
-    to_char(s.scheduled_at AT TIME ZONE
-    'Europe/Brussels', 'YYYYMMDD')::int,
-    to_char(s.scheduled_at AT TIME ZONE
-    'Europe/Brussels', 'HH24MI')::int,
-    s.scheduled_at, s.vehicle_id, s.delay_s, s.canceled,
-    s.is_extra, s.platform_changed,
-    s.train_type, s.platform, s.occupancy, s.snapshot_at, s.source_file
+    snapshot_at, source_file)
+        SELECT coalesce(dep.station_key, -1),
+        coalesce(des.station_key, -1),
+        to_char(s.scheduled_at AT TIME ZONE
+        'Europe/Brussels', 'YYYYMMDD')::int,
+        to_char(s.scheduled_at AT TIME ZONE
+        'Europe/Brussels', 'HH24MI')::int,
+        s.scheduled_at, s.vehicle_id, s.delay_s, s.canceled,
+        s.is_extra, s.platform_changed,
+        s.train_type, s.platform, s.occupancy, s.snapshot_at, s.source_file
     FROM stg_departure AS s
     LEFT JOIN dim_station AS dep
-    ON dep.station_id  = s.departure_station_id
-    LEFT JOIN dim_station AS dest
-    ON dest.station_id = s.destination_station_id
+    ON  dep.station_id  = s.departure_station_id
+        AND s.scheduled_at >= dep.valid_from
+        AND s.scheduled_at <  dep.valid_to
+    LEFT JOIN dim_station AS des
+    ON  des.station_id  = s.destination_station_id
+        AND s.scheduled_at >= des.valid_from
+        AND s.scheduled_at <  des.valid_to
     ON CONFLICT (departure_station_key, scheduled_at, vehicle_id)
     DO UPDATE SET
     delay_s = EXCLUDED.delay_s,
@@ -189,25 +203,28 @@ UPSERT_FACT_DEPARTURES = """
     snapshot_at = EXCLUDED.snapshot_at,
     source_file = EXCLUDED.source_file;"""
 
-STATION_KEY_UNKNOWS = """
+INSERT_UNKNOWN_STATION_SQL = """
     INSERT INTO dim_station (station_key, station_id,
-    standard_name, longitude, latitude, snapshot_at, source_file)
+    standard_name, longitude, latitude, snapshot_at,
+    source_file, valid_from, valid_to, is_current)
     OVERRIDING SYSTEM VALUE
-    VALUES (-1, 'UNKNOWNS', 'Gare inconnue', NULL, NULL,
-    '1970-01-01', 'membre inconnu')
-    ON CONFLICT (station_id) DO NOTHING;"""
+    VALUES (-1, 'UNKNOWN',
+    'Gare inconnue', NULL, NULL, '1970-01-01',
+    'files unknown', '1900-01-01', '9999-12-31', true)
+    ON CONFLICT (station_id, valid_from) DO NOTHING;"""
 
 UNKNOWN_STATIONS_SQL = """
     SELECT s.departure_station_id
     FROM stg_departure AS s
-    LEFT JOIN dim_station AS d ON d.station_id = s.departure_station_id
+    LEFT JOIN dim_station AS d
+    ON d.station_id = s.departure_station_id
     WHERE d.station_key IS NULL
     UNION
     SELECT s.destination_station_id
     FROM stg_departure AS s
-    LEFT JOIN dim_station AS d ON d.station_id = s.destination_station_id
-    WHERE d.station_key IS NULL
-    ORDER BY 1;"""
+    LEFT JOIN dim_station AS d
+    ON d.station_id = s.destination_station_id
+    WHERE d.station_key IS NULL ORDER BY 1;"""
 
 INDEX_FACT_TIME_DEPARTURES = """
 CREATE INDEX IF NOT EXISTS idx_fact_departure_date
@@ -221,6 +238,36 @@ GET_ETL_LOAD_SUCCESS_DATE = """
 SELECT DISTINCT run_date
 FROM etl_load_log
 WHERE job = 'irail-load-facts' AND status = 'success'"""
+
+
+CLOSE_CHANGED_STATIONS_SQL = """
+UPDATE dim_station AS d
+SET valid_to = s.snapshot_at, is_current = false
+FROM stg_station AS s
+WHERE d.station_id = s.station_id
+  AND d.is_current
+  AND (d.standard_name IS DISTINCT FROM s.standard_name
+       OR d.longitude  IS DISTINCT FROM s.longitude
+       OR d.latitude   IS DISTINCT FROM s.latitude);"""
+
+
+MERGE_DIM_STATION_SQL = """
+MERGE INTO dim_station AS d
+USING stg_station AS s
+    ON d.station_id = s.station_id AND d.is_current
+WHEN MATCHED THEN
+    UPDATE SET snapshot_at = s.snapshot_at,
+    source_file = s.source_file
+WHEN NOT MATCHED THEN
+    INSERT (station_id, standard_name, longitude,
+    latitude, snapshot_at, source_file, valid_from,
+    valid_to, is_current)
+    VALUES (s.station_id, s.standard_name, s.longitude,
+    s.latitude, s.snapshot_at, s.source_file,
+    CASE WHEN EXISTS (SELECT 1 FROM dim_station AS x WHERE x.station_id = s.station_id)
+    THEN s.snapshot_at ELSE '1900-01-01' END,
+    '9999-12-31',
+    true);"""
 
 
 def date_rows_to_tuples(rows: list) -> list[tuple]:
@@ -322,6 +369,12 @@ def upsert_dim_date(db: DbSettings, rows: list[tuple]) -> int:
             return cur.rowcount
 
 
+def apply_station_scd2(cur) -> None:
+    """Applique la SCD 2 : ferme les versions qui ont changé, puis MERGE."""
+    cur.execute(CLOSE_CHANGED_STATIONS_SQL)
+    cur.execute(MERGE_DIM_STATION_SQL)
+
+
 def upsert_dim_station(db: DbSettings, rows: list[tuple]) -> int:
     """Insère ou met à jour les stations dans la table dim_station."""
     with psycopg.connect(
@@ -332,9 +385,12 @@ def upsert_dim_station(db: DbSettings, rows: list[tuple]) -> int:
         password=db.password,
     ) as conn:
         with conn.cursor() as cur:
+            cur.execute(CREATE_STG_STATION_SQL)
+            cur.execute(TRUNCATE_STG_STATION)
+            cur.executemany(INSERT_STG_STATION_SQL, rows)
             cur.execute(CREATE_DIM_STATION_SQL)
-            cur.execute(STATION_KEY_UNKNOWS)
-            cur.executemany(UPSERT_DIM_STATION_SQL, rows)
+            cur.execute(INSERT_UNKNOWN_STATION_SQL)
+            apply_station_scd2(cur)
             return cur.rowcount
 
 
