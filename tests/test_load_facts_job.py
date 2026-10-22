@@ -1,8 +1,42 @@
 from datetime import date
+from types import SimpleNamespace
 
+import pandas as pd
+import psycopg
 import pytest
 
+from irail_ingestion import load_facts_job
 from irail_ingestion.load_facts_job import available_days, missing_days
+
+
+def test_load_one_day_logs_failure(monkeypatch, tmp_path, caplog):
+    calls = []
+
+    # 1) Fabriquer les doublures (rien ne s'exécute encore)
+    def fake_upsert(db, rows, run_date, started_at):
+        raise psycopg.OperationalError("connexion perdue")
+
+    def fake_log_failure(db, run_date, started_at, error):
+        calls.append((run_date, error))
+
+    # 2) Mettre les doublures à la place des vraies fonctions
+    monkeypatch.setattr(
+        load_facts_job, "load_settings", lambda: SimpleNamespace(silver_dir=tmp_path)
+    )
+    monkeypatch.setattr(load_facts_job, "load_db_settings", lambda: [])
+    monkeypatch.setattr(load_facts_job.pd, "read_parquet", lambda x: pd.DataFrame())
+    monkeypatch.setattr(load_facts_job, "departure_rows", lambda y: [])
+    monkeypatch.setattr(load_facts_job, "upsert_fact_departures", fake_upsert)
+    monkeypatch.setattr(load_facts_job, "log_load_failure", fake_log_failure)
+
+    # 3) Lancer la vraie fonction
+    result = load_facts_job.load_one_day(date(2026, 10, 2))
+
+    # 4) Vérifier : le code de retour, l'échec journalisé, la date dans le log
+    assert result == 1
+    assert calls[0][0] == date(2026, 10, 2)
+    assert "2026-10-02" in caplog.text
+
 
 D25 = date(2026, 9, 25)
 D26 = date(2026, 9, 26)

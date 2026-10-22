@@ -78,4 +78,7 @@ erDiagram
 - **Si demain `dim_station` doit passer en SCD 1** : on ne recharge **rien**. Le Data Vault a gardé toutes les versions ; il suffit de changer la vue pour ne garder que la dernière version de chaque gare. En Kimball seul, l'historique écrasé serait perdu.
 
 ## Limites actuelles
-- `stg_departure` est vidé à chaque `irail-load-facts` et ne contient que **le dernier jour chargé**. Le Data Vault ne contient donc qu'un jour de départs (1 130 links). Pour le garder à jour, il faudrait lancer `data_vault_load.sql` après chaque jour chargé, ou le charger directement depuis la silver.
+- `stg_departure` est vidé à chaque `irail-load-facts` et ne contient que **le dernier jour chargé**. `data_vault_load.sql` seul ne charge donc qu'un jour.
+- **Solution provisoire** : `scripts/load_data_vault.sh` recharge tout le Data Vault par un lancement manuel, jour par jour (`irail-load-facts <jour>` remplit le staging, puis `data_vault_load.sql` le lit). Résultat : 12 606 links = 12 606 faits, sur 15 jours.
+- **Sa limite** : le Data Vault dépend du staging de l'étoile, et chaque jour rechargé ajoute une 2ᵉ ligne `success` dans `etl_load_log`.
+- **La cible (S3)** : charger le Data Vault avec dbt, directement depuis la silver, pour le lancer automatiquement, le découpler du staging de l'étoile et laisser dbt gérer l'ordre des dépendances.

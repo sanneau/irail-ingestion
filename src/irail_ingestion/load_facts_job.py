@@ -71,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def load_one_day(date_run: date) -> int:
+    success = 0
     db_settings = load_db_settings()
     user_settings = load_settings()
     started_at = dt.now(UTC)
@@ -83,18 +84,18 @@ def load_one_day(date_run: date) -> int:
         df_fact_dep = pd.read_parquet(dir_finale)
     except FileNotFoundError:
         logger.exception("file not found at the dates, directory : %s", dir_finale)
-        return 1
+        success = 1
 
     try:
         row_count = upsert_fact_departures(
             db_settings, departure_rows(df_fact_dep), date_run, started_at
         )
+        logger.info("Success : We have had a new dates rows : %s", row_count)
     except psycopg.Error as e:
-        logger.error("Erreur : %s", e)
+        logger.error("Date run : %s, Erreur : %s", date_run, e)
         try:
             log_load_failure(db_settings, date_run, started_at, str(e))
         except psycopg.Error:
             logger.error("Impossible d'écrire l'échec dans etl_load_log")
-        return 1
-    logger.info("Success : We have had a new dates rows : %s", row_count)
-    return 0
+        success = 1
+    return success
