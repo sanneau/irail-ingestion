@@ -33,7 +33,12 @@ def write_silver_parquet(
     )
     path_to_build.parent.mkdir(parents=True, exist_ok=True)
     df_of_liveboard.to_parquet(
-        path_to_build, engine="pyarrow", compression="snappy", index=False
+        path_to_build,
+        engine="pyarrow",
+        compression="snappy",
+        coerce_timestamps="us",
+        allow_truncated_timestamps=True,
+        index=False,
     )
     return path_to_build
 
@@ -45,6 +50,11 @@ def write_stations_parquet_station(
     path_to_build = Path(silver_dir) / "stations" / "stations.parquet"
     path_to_build.parent.mkdir(parents=True, exist_ok=True)
     df_of_stations.to_parquet(
-        path_to_build, engine="pyarrow", compression="snappy", index=False
+        path_to_build,
+        engine="pyarrow",
+        compression="snappy",
+        coerce_timestamps="us",
+        allow_truncated_timestamps=True,
+        index=False,
     )
     return path_to_build

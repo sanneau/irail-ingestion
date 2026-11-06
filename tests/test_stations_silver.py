@@ -56,3 +56,12 @@ def test_parquet_round_trip_keeps_types(tmp_path, payload_station):
     reread = pd.read_parquet(write_stations_parquet_station(df, tmp_path))
 
     pd.testing.assert_frame_equal(reread, df)
+
+
+def test_parquet_ensure_microseconds_type_station(tmp_path, payload_station):
+    df = build_dataframe_for_station(_stations(payload_station))
+
+    reread = pd.read_parquet(write_stations_parquet_station(df, tmp_path))
+
+    assert str(reread["snapshot_at"].dtype) == "datetime64[us, UTC]"
+    assert str(reread["api_generated_at"].dtype) == "datetime64[us, UTC]"
