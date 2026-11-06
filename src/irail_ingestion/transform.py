@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 SILVER_SCHEMA_LIVEBOARD: dict[str, str] = {
     "departure_station_id": "string",
     "departure_station_name": "string",
-    "snapshot_at": "datetime64[ns, UTC]",
-    "scheduled_at": "datetime64[ns, UTC]",
+    "snapshot_at": "datetime64[us, UTC]",
+    "scheduled_at": "datetime64[us, UTC]",
     "delay_s": "Int64",
     "canceled": "boolean",
     "is_extra": "boolean",
@@ -32,8 +32,8 @@ SILVER_SCHEMA_STATION: dict[str, str] = {
     "standard_name": "string",
     "longitude": "Float64",
     "latitude": "Float64",
-    "api_generated_at": "datetime64[ns, UTC]",
-    "snapshot_at": "datetime64[ns, UTC]",
+    "api_generated_at": "datetime64[us, UTC]",
+    "snapshot_at": "datetime64[us, UTC]",
     "source_file": "string",
 }
 
@@ -77,7 +77,6 @@ def replace_sentinel_value(txt_not_right: str, sentinel: str) -> str | None:
 
 
 def from_txt_to_time(time: str) -> datetime:
-    from_txt_to_int(time)
     return datetime.fromtimestamp(from_txt_to_int(time), tz=UTC)
 
 

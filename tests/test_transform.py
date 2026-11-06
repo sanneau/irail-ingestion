@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
 
+import pandas as pd
 import pytest
 
 from irail_ingestion.exceptions import ConvertionIsWrongError, InvalidSnapshotError
+from irail_ingestion.silver_storage import write_silver_parquet
 from irail_ingestion.transform import (
+    build_dataframe_for_liveboard,
     from_file_name_to_snapshot,
     from_payload_to_dataclass,
     from_payload_to_dataclass_station,
@@ -164,3 +167,12 @@ class TestTransform:
     def test_from_file_name_to_snapshot_not_a_date(self, test_input):
         with pytest.raises(ConvertionIsWrongError):
             from_file_name_to_snapshot(test_input)
+
+    def test_parquet_ensure_microseconds_type_departures(self, tmp_path, payload):
+        departures, _ = from_payload_to_dataclass(payload, SNAPSHOT_AT, SOURCE_FILE)
+        df = build_dataframe_for_liveboard(departures)
+
+        reread = pd.read_parquet(write_silver_parquet(df, tmp_path, SNAPSHOT_AT))
+
+        assert str(reread["scheduled_at"].dtype) == "datetime64[us, UTC]"
+        assert str(reread["snapshot_at"].dtype) == "datetime64[us, UTC]"
