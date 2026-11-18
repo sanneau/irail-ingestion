@@ -22,19 +22,19 @@ provider "azurerm" {
 
 # ── 3. Des valeurs écrites une fois, réutilisées partout : local.tags ──
 locals {
-  tags = { project = "sncb", env = "dev", managed_by = "terraform", owner="Simon" }
+  tags = { project = "sncb", env = var.env, managed_by = "terraform", owner = "Simon" }
 }
 
 # ── 4. Le groupe de ressources (T3, déjà créé) ──
 resource "azurerm_resource_group" "rg" { # "type"  "nom local" (le nom pour Terraform, pas pour Azure)
-  name     = "rg-sncb-tf-dev"            # le nom dans Azure
+  name     = "rg-sncb-tf-${var.env}"     # le nom dans Azure
   location = "francecentral"
   tags     = local.tags
 }
 
 # ── 5. Le compte de stockage : ✅ TON BLOC, juste du premier coup (je n'ai changé que l'alignement) ──
 resource "azurerm_storage_account" "lake" {
-  name                            = "stsncbtfasdev26"                  # 15 caractères, a-z0-9 : valide (ton E1 !)
+  name                            = "stsncbtfas${var.env}26"           # 15 caractères, a-z0-9 : valide (ton E1 !)
   resource_group_name             = azurerm_resource_group.rg.name     # RÉFÉRENCE : « le name du bloc azurerm_resource_group nommé rg »
   location                        = azurerm_resource_group.rg.location # → Terraform sait qu'il faut créer le groupe AVANT
   account_tier                    = "Standard"
@@ -44,6 +44,9 @@ resource "azurerm_storage_account" "lake" {
   min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
   tags                            = local.tags
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # ── 6a. QUI SUIS-JE ? Un bloc « data » LIT quelque chose qui existe déjà. Il ne crée rien. ──
