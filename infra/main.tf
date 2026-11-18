@@ -12,6 +12,13 @@ terraform {
       version = "~> 4.0" # toute version 4.x, jamais la 5 sans le décider
     }
   }
+  backend "azurerm" {
+    resource_group_name   = "rg-sncb-tfstate"
+    storage_account_name  = "stacctfsa26"
+    container_name        = "tfstate"
+    key                   = "sncb/dev.tfstate"
+    use_azuread_auth      = true
+  }
 }
 
 # ── 2. Comment parler à Azure (il réutilise ton `az login` + ARM_SUBSCRIPTION_ID) ──
