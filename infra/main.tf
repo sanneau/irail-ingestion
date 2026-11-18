@@ -13,11 +13,11 @@ terraform {
     }
   }
   backend "azurerm" {
-    resource_group_name   = "rg-sncb-tfstate"
-    storage_account_name  = "stacctfsa26"
-    container_name        = "tfstate"
-    key                   = "sncb/dev.tfstate"
-    use_azuread_auth      = true
+    resource_group_name  = "rg-sncb-tfstate"
+    storage_account_name = "stacctfsa26"
+    container_name       = "tfstate"
+    key                  = "sncb/dev.tfstate"
+    use_azuread_auth     = true
   }
 }
 
@@ -81,6 +81,32 @@ resource "azurerm_storage_data_lake_gen2_filesystem" "layers" {
   depends_on         = [azurerm_role_assignment.me_lake]   # ⚠️ créer les conteneurs APRÈS ton rôle, sinon 403
   # ❓ Ton « ? » : c'était bien depends_on. Pourquoi faut-il le dire ? Aucun argument de ce bloc ne mentionne le rôle,
   #    donc Terraform ne devine pas le lien. Or créer un conteneur avec ton identité exige le rôle. On le lui dit.
+}
+
+# ── 9. T9 : la Data Factory, son badge (identité), son droit (rôle), sa consigne (service lié) ──
+resource "azurerm_data_factory" "adf" {
+  name                = "adf-sncb-tf-${var.env}-as26"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  tags                = local.tags # ❌ tu avais local.tags.owner = UN texte ("Simon") ; tags attend un MAP (même erreur qu'hier au T6)
+  identity {                       # ❌ manquait : sans ce bloc, pas de badge → identity[0] n'existe pas, le rôle plus bas ne peut rien lire
+    type = "SystemAssigned"        # Azure crée l'identité avec la Data Factory et la supprime avec elle
+  }
+}
+
+resource "azurerm_role_assignment" "adf_lake" {
+  scope                = azurerm_storage_account.lake.id                   # OÙ : le lake ✅
+  role_definition_name = "Storage Blob Data Contributor"                   # QUEL RÔLE ✅
+  principal_id         = azurerm_data_factory.adf.identity[0].principal_id # QUI : le numéro de badge de la Data Factory
+  # ❌ tu avais azurerm_data_factory.adf.id = l'ADRESSE de la ressource ("/subscriptions/.../factories/adf-...") :
+  #    c'est où elle habite, pas son badge. Un rôle se donne à un principal_id (un GUID d'Entra ID), jamais à un id de ressource.
+}
+
+resource "azurerm_data_factory_linked_service_data_lake_storage_gen2" "adf_linked_service_lake" {
+  name                 = "ls_lake"                                         # ❌ manquait (argument obligatoire) : le nom du service lié tel qu'il apparaîtra dans le Studio ADF
+  data_factory_id      = azurerm_data_factory.adf.id                       # ✅ ici c'est bien l'adresse de la ressource qu'on veut
+  url                  = azurerm_storage_account.lake.primary_dfs_endpoint # ✅
+  use_managed_identity = true                                              # ✅ « utilise ton badge, pas la clé »
 }
 
 # ── 8. Ce que Terraform affiche à la fin de l'apply (et que d'autres outils peuvent lire) ──
