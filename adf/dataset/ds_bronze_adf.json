@@ -1,0 +1,33 @@
+{
+	"name": "ds_bronze_adf",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_lake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"station": {
+				"type": "string",
+				"defaultValue": "Gent-Sint-Pieters"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat(dataset().station, '_', formatDateTime(utcNow(), 'HHmmss'), '.json')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('liveboard_adf/date=', formatDateTime(utcNow(), 'yyyy-MM-dd'))",
+					"type": "Expression"
+				},
+				"fileSystem": "bronze"
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,34 @@
+{
+	"name": "BeginWithdrawStation",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pl_liveboard_gares",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"gares": [
+						"Waregem",
+						"Gent-Sint-Pieters",
+						"Waremme",
+						"Walcourt",
+						"Brussel-Centraal"
+					]
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2026-11-19T15:00:00",
+				"endTime": "2026-11-19T22:00:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

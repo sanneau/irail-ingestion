@@ -1,0 +1,28 @@
+{
+	"name": "ds_irail_liveboard",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_irail",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"station": {
+				"type": "string",
+				"defaultValue": "Gent-Sint-Pieters"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": {
+					"value": "@concat('liveboard/?station=', dataset().station, '&format=json&lang=en')",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

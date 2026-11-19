@@ -1,0 +1,61 @@
+{
+	"name": "pl_liveboard_gares",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEachGares",
+				"description": "For each station of the pool, with 3 batch in parallele,",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.gares",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 3,
+					"activities": [
+						{
+							"name": "Execute Pipeline1",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_copy_liveboard",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"station": {
+										"value": "@item()",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"gares": {
+				"type": "array",
+				"defaultValue": [
+					"Waregem",
+					"Gent-Sint-Pieters",
+					"Waremme",
+					"Walcourt",
+					"Brussel-Centraal"
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-11-19T15:06:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
