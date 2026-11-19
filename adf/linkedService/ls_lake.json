@@ -1,0 +1,12 @@
+{
+	"name": "ls_lake",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": " ADLS Gen2 data lake (stsncbdevas26), accessed with the factory's system-assigned managed identity.",
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://stsncbdevas26.dfs.core.windows.net/"
+		}
+	}
+}

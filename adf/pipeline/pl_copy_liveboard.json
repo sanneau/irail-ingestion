@@ -1,0 +1,77 @@
+{
+	"name": "pl_copy_liveboard",
+	"properties": {
+		"activities": [
+			{
+				"name": "copy_station_to_bronze",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET",
+							"additionalHeaders": "User-Agent: irail-learning-project",
+							"requestTimeout": ""
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_irail_liveboard",
+						"type": "DatasetReference",
+						"parameters": {
+							"station": {
+								"value": "@pipeline().parameters.station",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_bronze_adf",
+						"type": "DatasetReference",
+						"parameters": {
+							"station": {
+								"value": "@pipeline().parameters.station",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"station": {
+				"type": "string",
+				"defaultValue": "Gent-Sint-Pieters"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-11-19T15:06:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,16 @@
+{
+	"name": "adf-sncb-dev-as26",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true,
+			"isExplicitlySet": false
+		}
+	},
+	"location": "francecentral",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "ad2f2d4d-846c-4fdd-9660-96fd0aacb33f",
+		"tenantId": "d5b48479-c0c4-4d27-bc91-597f255db984"
+	}
+}
