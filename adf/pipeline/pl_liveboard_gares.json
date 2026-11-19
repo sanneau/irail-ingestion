@@ -4,7 +4,7 @@
 		"activities": [
 			{
 				"name": "ForEachGares",
-				"description": "For each station of the pool, with 3 batch in parallele,",
+				"description": "For each station of the pool, with 3 batch in pll",
 				"type": "ForEach",
 				"dependsOn": [],
 				"userProperties": [],
