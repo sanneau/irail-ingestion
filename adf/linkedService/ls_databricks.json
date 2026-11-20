@@ -1,0 +1,13 @@
+{
+	"name": "ls_databricks",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-7405616262921561.1.azuredatabricks.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/cdf7281f-dbef-471a-ab78-0e167da466bb/resourceGroups/rg-sncb-tf-dev/providers/Microsoft.Databricks/workspaces/dbw-sncb-tf-dev-as26",
+			"existingClusterId": "1120-122522-acoetrxf"
+		}
+	}
+}
