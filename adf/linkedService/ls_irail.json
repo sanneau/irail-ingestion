@@ -1,0 +1,14 @@
+{
+	"name": "ls_irail",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "iRail public REST API (Belgian railways), anonymous access. Base URL only; endpoints are set in the datasets.",
+		"annotations": [],
+		"type": "HttpServer",
+		"typeProperties": {
+			"url": "https://api.irail.be/",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
