@@ -31,35 +31,29 @@ resource "azurerm_resource_group" "rg" {
   tags     = local.tags
 }
 
-resource "azurerm_storage_account" "lake" {
-  name                            = "stsncbtfas${var.env}26"
-  resource_group_name             = azurerm_resource_group.rg.name
-  location                        = azurerm_resource_group.rg.location
-  account_tier                    = "Standard"
-  account_replication_type        = "LRS"
-  account_kind                    = "StorageV2"
-  is_hns_enabled                  = true
-  min_tls_version                 = "TLS1_2"
-  allow_nested_items_to_be_public = false
-  tags                            = local.tags
-  lifecycle {
-    prevent_destroy = true
-  }
-}
 
 data "azurerm_client_config" "current" {}
 
-resource "azurerm_role_assignment" "me_lake" {
-  scope                = azurerm_storage_account.lake.id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
+module "lake" {
+  source              = "./modules/lake"
+  env                 = var.env
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  tags                = local.tags
+  writer_principal_id = data.azurerm_client_config.current.object_id
 }
 
-resource "azurerm_storage_data_lake_gen2_filesystem" "layers" {
-  for_each           = toset(["bronze", "silver", "gold"])
-  name               = each.key
-  storage_account_id = azurerm_storage_account.lake.id
-  depends_on         = [azurerm_role_assignment.me_lake]
+moved {
+  from = azurerm_storage_account.lake
+  to   = module.lake.azurerm_storage_account.lake
+}
+moved {
+  from = azurerm_role_assignment.me_lake
+  to   = module.lake.azurerm_role_assignment.me_lake
+}
+moved {
+  from = azurerm_storage_data_lake_gen2_filesystem.layers
+  to   = module.lake.azurerm_storage_data_lake_gen2_filesystem.layers
 }
 
 resource "azurerm_data_factory" "adf" {
@@ -73,7 +67,7 @@ resource "azurerm_data_factory" "adf" {
 }
 
 resource "azurerm_role_assignment" "adf_lake" {
-  scope                = azurerm_storage_account.lake.id
+  scope                = module.lake.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_data_factory.adf.identity[0].principal_id
 }
@@ -81,11 +75,11 @@ resource "azurerm_role_assignment" "adf_lake" {
 resource "azurerm_data_factory_linked_service_data_lake_storage_gen2" "adf_linked_service_lake" {
   name                 = "ls_lake"
   data_factory_id      = azurerm_data_factory.adf.id
-  url                  = azurerm_storage_account.lake.primary_dfs_endpoint
+  url                  = module.lake.dfs_endpoint
   use_managed_identity = true
 }
 
-### Definition du KeyVault
+### Le Key Vault (coffre à secrets, droits en mode RBAC)
 resource "azurerm_key_vault" "kv" {
   name                       = "kv-sncb-tf-${var.env}-as26"
   location                   = azurerm_resource_group.rg.location
@@ -97,25 +91,26 @@ resource "azurerm_key_vault" "kv" {
   tags                       = local.tags
 }
 
-### Toi, tu ecris les secret
+### Toi, tu écris les secrets (lecture et écriture)
 resource "azurerm_role_assignment" "kv_me" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-### Toi, tu utilise les secret
+### ADF lit les secrets (lecture seule)
 resource "azurerm_role_assignment" "kv_adf" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_data_factory.adf.identity[0].principal_id
 }
 
+### La connexion d'ADF vers le coffre (service lié)
 resource "azurerm_data_factory_linked_service_key_vault" "adf_linked_service_kv" {
   name            = "ls_keyvault"
   data_factory_id = azurerm_data_factory.adf.id
   key_vault_id    = azurerm_key_vault.kv.id
 }
 
-output "storage_account_name" { value = azurerm_storage_account.lake.name }
-output "dfs_endpoint" { value = azurerm_storage_account.lake.primary_dfs_endpoint }
+output "storage_account_name" { value = module.lake.name }
+output "dfs_endpoint" { value = module.lake.dfs_endpoint }
