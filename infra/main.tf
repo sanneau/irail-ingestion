@@ -85,6 +85,7 @@ resource "azurerm_data_factory_linked_service_data_lake_storage_gen2" "adf_linke
   use_managed_identity = true
 }
 
+### Definition du KeyVault
 resource "azurerm_key_vault" "kv" {
   name                       = "kv-sncb-tf-${var.env}-as26"
   location                   = azurerm_resource_group.rg.location
@@ -96,12 +97,14 @@ resource "azurerm_key_vault" "kv" {
   tags                       = local.tags
 }
 
+### Toi, tu ecris les secret
 resource "azurerm_role_assignment" "kv_me" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+### Toi, tu utilise les secret
 resource "azurerm_role_assignment" "kv_adf" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets User"
