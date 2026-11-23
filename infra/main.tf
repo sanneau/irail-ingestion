@@ -24,6 +24,7 @@ locals {
   tags = { project = "sncb", env = var.env, managed_by = "terraform", owner = "Simon" }
 }
 
+
 resource "azurerm_resource_group" "rg" {
   name     = "rg-sncb-tf-${var.env}"
   location = "francecentral"
@@ -82,6 +83,38 @@ resource "azurerm_data_factory_linked_service_data_lake_storage_gen2" "adf_linke
   data_factory_id      = azurerm_data_factory.adf.id
   url                  = azurerm_storage_account.lake.primary_dfs_endpoint
   use_managed_identity = true
+}
+
+### Definition du KeyVault
+resource "azurerm_key_vault" "kv" {
+  name                       = "kv-sncb-tf-${var.env}-as26"
+  location                   = azurerm_resource_group.rg.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  rbac_authorization_enabled = true
+  soft_delete_retention_days = 7
+  tags                       = local.tags
+}
+
+### Toi, tu ecris les secret
+resource "azurerm_role_assignment" "kv_me" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+### Toi, tu utilise les secret
+resource "azurerm_role_assignment" "kv_adf" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_data_factory.adf.identity[0].principal_id
+}
+
+resource "azurerm_data_factory_linked_service_key_vault" "adf_linked_service_kv" {
+  name            = "ls_keyvault"
+  data_factory_id = azurerm_data_factory.adf.id
+  key_vault_id    = azurerm_key_vault.kv.id
 }
 
 output "storage_account_name" { value = azurerm_storage_account.lake.name }
