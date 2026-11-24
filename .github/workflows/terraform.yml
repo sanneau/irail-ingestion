@@ -1,0 +1,25 @@
+name: Terraform
+on:
+    pull_request:
+        paths:
+            - "infra/**"
+    push:
+        branches: [main]
+        paths:
+            - "infra/**"
+
+jobs:
+    validates:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                files_tested: ["infra", "infra/databricks"]
+        defaults:
+            run:
+                working-directory: ${{ matrix.files_tested}}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: hashicorp/setup-terraform@v3
+            - run: terraform fmt -check -recursive
+            - run: terraform init -backend=false
+            - run: terraform validate
