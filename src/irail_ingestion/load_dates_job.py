@@ -21,7 +21,7 @@ def main():
     Main function to run the script to load date rows into the dim_date table.
     """
     setup_logging()
-    db_settings = load_db_                              settings()
+    db_settings = load_db_settings()
     start_date = date(2024, 1, 1)
     end_date = date(2030, 12, 31)
     # Build date, time rows and convert them to tuples for insertion
@@ -30,7 +30,7 @@ def main():
 
     date_tuples = date_rows_to_tuples(date_rows)
     time_tuples = time_rows_to_tuples(time_rows)
-    
+
     try:
         upsert_dim_date(db_settings, date_tuples)
         upsert_dim_time(db_settings, time_tuples)
