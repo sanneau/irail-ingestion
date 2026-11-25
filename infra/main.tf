@@ -40,7 +40,7 @@ module "lake" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   tags                = local.tags
-  writer_principal_id = data.azurerm_client_config.current.object_id
+  writer_principal_id = var.me_object_id # toi, écrit noir sur blanc (et non « celui qui lance Terraform »)
 }
 
 moved {
@@ -95,7 +95,7 @@ resource "azurerm_key_vault" "kv" {
 resource "azurerm_role_assignment" "kv_me" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = var.me_object_id # toi, quel que soit celui qui lance Terraform (PC ou CI)
 }
 
 ### ADF lit les secrets (lecture seule)
