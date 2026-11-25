@@ -1,0 +1,43 @@
+# Sur chaque PR qui touche l'infra, la CI calcule le `terraform plan` : le relecteur voit AVANT le merge
+# ce que la PR changerait dans Azure (et surtout si elle détruit quelque chose).
+# Connexion à Azure SANS secret : identité fédérée (OIDC) → application Entra ID gh-terraform-sncb,
+# qui n'a que des droits de LECTURE (moindre privilège). On ne lance JAMAIS `apply` depuis ce workflow.
+
+name: Terraform plan
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"                                 # une PR qui modifie l'infra
+      - .github/workflows/terraform-plan.yml       # ... ou ce fichier lui-même (sinon la PR qui le crée ne le lancerait pas)
+
+# Droits du jeton GitHub de ce workflow (par défaut, il ne peut pas demander de jeton OIDC)
+permissions:
+  id-token: write      # demander à GitHub le jeton signé « je suis ce dépôt, sur une PR » (étape ① de l'OIDC)
+  contents: read       # lire le dépôt (pour checkout)
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra       # toutes les commandes `run:` dans infra/ (infra/databricks est détruit : pas de plan)
+    env:
+      # Variables lues par Terraform (le provider azurerm ET le backend) pour se connecter à Azure
+      ARM_USE_OIDC: true                           # « connecte-toi avec le jeton OIDC », pas avec un mot de passe
+      ARM_RESOURCE_PROVIDER_REGISTRATIONS: none    # ne pas enregistrer de services sur l'abonnement (un Lecteur n'en a pas le droit)
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}             # QUI se connecte : l'application gh-terraform-sncb
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}             # DANS QUELLE organisation : ton annuaire Entra ID
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }} # SUR QUEL abonnement
+      # vars.NOM = l'onglet « Variables » de GitHub (pas secret) ; secrets.NOM serait l'onglet « Secrets »
+    steps:
+      - uses: actions/checkout@v4            # copie le dépôt sur la VM (elle démarre vide)
+      - uses: hashicorp/setup-terraform@v3   # installe Terraform
+
+      # AVEC le backend cette fois : le plan doit LIRE le state (dans stacctfsa26) pour comparer code / state / Azure.
+      # -input=false : ne jamais poser de question (il n'y a personne pour répondre dans une CI) → erreur au lieu de bloquer.
+      - run: terraform init -input=false
+
+      # Le plan : compare le code, le state et la réalité dans Azure, et liste ce qui changerait. Ne modifie RIEN.
+      # -var-file=dev.tfvars : les valeurs de dev (env = "dev").
+      - run: terraform plan -var-file=dev.tfvars -input=false
