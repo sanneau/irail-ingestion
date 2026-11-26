@@ -1,5 +1,6 @@
 services:
   pgdatabase:
+    profiles: ["warehouse"]
     image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -16,6 +17,7 @@ services:
       retries: 5
 
   pgadmin:
+    profiles: ["warehouse"]
     image: dpage/pgadmin4:9.18.0
     environment:
       PGADMIN_DEFAULT_EMAIL: ${DB_EMAIL}
@@ -24,6 +26,25 @@ services:
       - "pgadmin_data:/var/lib/pgadmin"
     ports:
       - "8085:80"
+
+  ingest:
+    build:                  # le dossier où se trouve le Dockerfile (comme le « . » de docker build)
+      context: .
+      target: ingest
+    env_file: .env              # le fichier qui contient tes variables
+    volumes:
+      - "./data:/app/data"        # à gauche : le dossier data de TON PC ; à droite : /app/data dans le conteneur
+  transform:
+    build:
+      context: .
+      target: transform
+    env_file: .env
+    volumes:
+      - "./data:/app/data"           # le MÊME dossier : il lit le bronze écrit par ingest
+    command: ["sh", "-c", "irail-transform $(date -u +%F)"]
+    depends_on:
+      ingest:
+        condition: service_completed_successfully
 
 volumes:
   sncb_bruxelles_data:

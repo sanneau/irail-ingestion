@@ -8,13 +8,6 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "duckdb>=1.5.6",
-    "holidays>=0.105",
-    "numpy>=2.5.3",
-    "pandas>=3.0.6",
-    "psycopg[binary]>=3.3.6",
-    "pyarrow>=25.0.1",
-    "pytest>=9.1.1",
     "requests>=2.34.2",
     "tenacity>=9.1.4",
 ]
@@ -38,6 +31,24 @@ dev = [
     "responses>=0.26.3",
     "ruff>=0.16.8",
 ]
+
+transform = [
+    "pyarrow>=25.0.1",
+    "pandas>=3.0.6"
+]
+
+load = [
+    "psycopg[binary]>=3.3.6",
+    "holidays>=0.105",
+    "pandas>=3.0.6"
+]
+
+analysis = [
+    "duckdb>=1.5.6",
+]
+
+[tool.uv]
+default-groups = ["dev", "transform", "load", "analysis"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "G", "N"]

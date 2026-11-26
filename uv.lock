@@ -236,44 +236,52 @@ name = "irail-ingestion"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "duckdb" },
-    { name = "holidays" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pyarrow" },
-    { name = "pytest" },
     { name = "requests" },
     { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
+analysis = [
+    { name = "duckdb" },
+]
 dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "responses" },
     { name = "ruff" },
 ]
+load = [
+    { name = "holidays" },
+    { name = "pandas" },
+    { name = "psycopg", extra = ["binary"] },
+]
+transform = [
+    { name = "pandas" },
+    { name = "pyarrow" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb", specifier = ">=1.5.6" },
-    { name = "holidays", specifier = ">=0.105" },
-    { name = "numpy", specifier = ">=2.5.3" },
-    { name = "pandas", specifier = ">=3.0.6" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
-    { name = "pyarrow", specifier = ">=25.0.1" },
-    { name = "pytest", specifier = ">=9.1.1" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
 [package.metadata.requires-dev]
+analysis = [{ name = "duckdb", specifier = ">=1.5.6" }]
 dev = [
     { name = "pre-commit", specifier = ">=4.6.2" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "responses", specifier = ">=0.26.3" },
     { name = "ruff", specifier = ">=0.16.8" },
+]
+load = [
+    { name = "holidays", specifier = ">=0.105" },
+    { name = "pandas", specifier = ">=3.0.6" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
+]
+transform = [
+    { name = "pandas", specifier = ">=3.0.6" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
 ]
 
 [[package]]
