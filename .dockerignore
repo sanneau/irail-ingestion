@@ -3,4 +3,5 @@
 data/
 .git
 formation/
+**/.terraform
 __pycache__

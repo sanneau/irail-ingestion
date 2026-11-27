@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "azure-identity>=1.27.0",
+    "azure-storage-file-datalake>=12.26.1",
     "requests>=2.34.2",
     "tenacity>=9.1.4",
 ]

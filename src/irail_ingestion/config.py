@@ -28,6 +28,7 @@ class Settings:
     data_dir: Path
     timeout_s: float
     silver_dir: Path
+    irail_adls_account: str | None = None
 
 
 def _require_env(name: str) -> str:
@@ -60,6 +61,7 @@ def load_settings() -> Settings:
         data_dir=Path(os.environ.get("IRAIL_DATA_DIR", DEFAULT_DATA_DIR)),
         timeout_s=float(os.environ.get("IRAIL_TIMEOUT_S", DEFAULT_TIMEOUT_S)),
         silver_dir=Path(os.environ.get("IRAIL_SILVER_DIR", DEFAULT_SILVER_DIR)),
+        irail_adls_account=os.environ.get("IRAIL_ADLS_ACCOUNT"),
     )
 
 

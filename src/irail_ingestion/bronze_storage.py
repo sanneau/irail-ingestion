@@ -3,6 +3,9 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
+from azure.identity import DefaultAzureCredential
+from azure.storage.filedatalake import DataLakeServiceClient
+
 from irail_ingestion.exceptions import DateIsNotRightError
 
 logger = logging.getLogger(__name__)
@@ -34,6 +37,23 @@ def write_payload_to_path(path_to_create: Path, payload: dict) -> Path:
     logger.info("Path : %s, Size: %s", path_to_create, path_to_create.stat().st_size)
 
     return path_to_create
+
+
+def write_payload_to_adls(relative_path: str, payload: dict, account: str):
+    """Ecrire le payload a l'adls azure"""
+    adress = f"https://{account}.dfs.core.windows.net"
+    service = DataLakeServiceClient(
+        account_url=adress,
+        credential=DefaultAzureCredential(),
+    )
+    texte = json.dumps(payload, ensure_ascii=False)
+    (
+        service.get_file_system_client("bronze")
+        .get_file_client(relative_path)
+        .upload_data(texte, overwrite=True)
+    )
+    logger.info("Path : %s, len_texte : %s", relative_path, len(texte))
+    return relative_path
 
 
 def format_date(date_to_format: datetime):
