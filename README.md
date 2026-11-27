@@ -1,5 +1,7 @@
 # irail-ingestion
 
+[![CI](https://github.com/sanneau/irail-ingestion/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sanneau/irail-ingestion/actions/workflows/ci.yml)
+
 Collects live departure boards of Belgian railway stations from the [iRail API](https://docs.irail.be/), keeps every raw response, turns them into a clean table of departures, and loads them into a PostgreSQL warehouse (a Kimball star schema and a Data Vault) to measure SNCB punctuality.
 
 ## Why
