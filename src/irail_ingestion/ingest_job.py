@@ -2,7 +2,11 @@ import logging
 import time
 from datetime import UTC, datetime
 
-from irail_ingestion.bronze_storage import build_storage_path, write_payload_to_path
+from irail_ingestion.bronze_storage import (
+    build_storage_path,
+    write_payload_to_adls,
+    write_payload_to_path,
+)
 from irail_ingestion.client import build_session, fetch_liveboard
 from irail_ingestion.config import load_settings
 from irail_ingestion.exceptions import IRailAPIError
@@ -29,12 +33,19 @@ def main() -> int:
             logger.exception("station %s did not work", station)
         else:
             count_succeed += 1
-            write_payload_to_path(
-                build_storage_path(
-                    user_settings.data_dir, "liveboard", station, fetched_at
-                ),
-                payload_to_write,
-            )
+            if user_settings.irail_adls_account:
+                write_payload_to_adls(
+                    build_storage_path("", "liveboard", station, fetched_at).as_posix(),
+                    payload_to_write,
+                    user_settings.irail_adls_account,
+                )
+            else:
+                write_payload_to_path(
+                    build_storage_path(
+                        user_settings.data_dir, "liveboard", station, fetched_at
+                    ),
+                    payload_to_write,
+                )
 
         time.sleep(PAUSE_BETWEEN_STATIONS_S)
 
