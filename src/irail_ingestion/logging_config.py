@@ -9,3 +9,4 @@ def setup_logging(level: int = logging.INFO) -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
         level=level,
     )
+    logging.getLogger("azure").setLevel(logging.WARNING)
