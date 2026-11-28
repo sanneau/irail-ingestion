@@ -74,7 +74,7 @@ resource "azurerm_container_app_job" "ingest" {
 
   template {
     container {
-      image  = "${azurerm_container_registry.acr.login_server}/irail-ingest:v1" # login_server de l'ACR + nom:tag
+      image  = "${azurerm_container_registry.acr.login_server}/irail-ingest:v2" # login_server de l'ACR + nom:tag
       name   = "ingest"
       cpu    = 0.25
       memory = "0.5Gi"
